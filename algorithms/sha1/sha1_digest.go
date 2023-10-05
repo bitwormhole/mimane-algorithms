@@ -28,6 +28,8 @@ const (
 )
 
 type digest struct {
+	// stack microscope.Stack
+
 	h   [5]uint32
 	x   [chunk]byte
 	nx  int
@@ -35,6 +37,7 @@ type digest struct {
 }
 
 func (d *digest) Reset() {
+
 	d.h[0] = init0
 	d.h[1] = init1
 	d.h[2] = init2
@@ -68,6 +71,7 @@ func (d *digest) Write(p []byte) (nn int, err error) {
 }
 
 func (d *digest) checkSum() [Size]byte {
+
 	len := d.len
 	// Padding.  Add a 1 bit and 0 bits until 56 bytes mod 64.
 	var tmp [64]byte
@@ -105,6 +109,7 @@ func block(dig *digest, p []byte) {
 // blockGeneric is a portable, pure Go version of the SHA-1 block step.
 // It's used by sha1block_generic.go and tests.
 func blockGeneric(dig *digest, p []byte) {
+	lg := logger{}
 	var w [16]uint32
 
 	h0, h1, h2, h3, h4 := dig.h[0], dig.h[1], dig.h[2], dig.h[3], dig.h[4]
@@ -126,6 +131,7 @@ func blockGeneric(dig *digest, p []byte) {
 			f := b&c | (^b)&d
 			t := bits.RotateLeft32(a, 5) + f + e + w[i&0xf] + _K0
 			a, b, c, d, e = t, a, bits.RotateLeft32(b, 30), c, d
+			lg.logW(i, w[i&0xf])
 		}
 		for ; i < 20; i++ {
 			tmp := w[(i-3)&0xf] ^ w[(i-8)&0xf] ^ w[(i-14)&0xf] ^ w[(i)&0xf]
@@ -134,6 +140,7 @@ func blockGeneric(dig *digest, p []byte) {
 			f := b&c | (^b)&d
 			t := bits.RotateLeft32(a, 5) + f + e + w[i&0xf] + _K0
 			a, b, c, d, e = t, a, bits.RotateLeft32(b, 30), c, d
+			lg.logW(i, w[i&0xf])
 		}
 		for ; i < 40; i++ {
 			tmp := w[(i-3)&0xf] ^ w[(i-8)&0xf] ^ w[(i-14)&0xf] ^ w[(i)&0xf]
@@ -141,6 +148,7 @@ func blockGeneric(dig *digest, p []byte) {
 			f := b ^ c ^ d
 			t := bits.RotateLeft32(a, 5) + f + e + w[i&0xf] + _K1
 			a, b, c, d, e = t, a, bits.RotateLeft32(b, 30), c, d
+			lg.logW(i, w[i&0xf])
 		}
 		for ; i < 60; i++ {
 			tmp := w[(i-3)&0xf] ^ w[(i-8)&0xf] ^ w[(i-14)&0xf] ^ w[(i)&0xf]
@@ -148,6 +156,7 @@ func blockGeneric(dig *digest, p []byte) {
 			f := ((b | c) & d) | (b & c)
 			t := bits.RotateLeft32(a, 5) + f + e + w[i&0xf] + _K2
 			a, b, c, d, e = t, a, bits.RotateLeft32(b, 30), c, d
+			lg.logW(i, w[i&0xf])
 		}
 		for ; i < 80; i++ {
 			tmp := w[(i-3)&0xf] ^ w[(i-8)&0xf] ^ w[(i-14)&0xf] ^ w[(i)&0xf]
@@ -155,6 +164,7 @@ func blockGeneric(dig *digest, p []byte) {
 			f := b ^ c ^ d
 			t := bits.RotateLeft32(a, 5) + f + e + w[i&0xf] + _K3
 			a, b, c, d, e = t, a, bits.RotateLeft32(b, 30), c, d
+			lg.logW(i, w[i&0xf])
 		}
 
 		h0 += a
@@ -171,7 +181,7 @@ func blockGeneric(dig *digest, p []byte) {
 
 // Sum returns the SHA-1 checksum of the data.
 func Sum(data []byte) [Size]byte {
-	var d digest
+	d := &digest{}
 	d.Reset()
 	d.Write(data)
 	return d.checkSum()
